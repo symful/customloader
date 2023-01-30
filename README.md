@@ -17,7 +17,7 @@ $ deno run -A examples/http.ts
 ```
 
 ```bash
-$ deno run -A examples/client.ts
+$ deno run -A --reload examples/client.ts
 ```
 
 # Caution
