@@ -23,4 +23,4 @@ $ deno run -A --reload examples/client.ts
 
 # Caution
 
-It is not extendable and production ready yet.
+It is not production ready yet.
