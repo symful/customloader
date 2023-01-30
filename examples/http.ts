@@ -3,7 +3,8 @@ import { fromFileUrl, join } from "../deps.ts";
 import { Loader } from "../src/loader.ts";
 
 const loader = new Loader([], {
-    jsonToTS: true
+    jsonToTS: true,
+    txtToTS: true
 });
 const parse = loader.createParseHTTPFromFile(
     fromFileUrl(join(Deno.mainModule, "..", "static"))

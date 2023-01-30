@@ -1,7 +1,7 @@
 import { join } from "../deps.ts";
-import { wrapStr } from "./util.ts";
+import { codeToURI, wrapStr } from "./util.ts";
 
-const textDecoder = new TextDecoder();
+const textDecoder = new TextDecoder;
 
 export interface Plugin {
     test(buf: Uint8Array, src: string): boolean;
@@ -10,6 +10,7 @@ export interface Plugin {
 
 export interface LoaderOptions {
     jsonToTS: boolean;
+    txtToTS: boolean;
 }
 
 export interface ParseOptions {
@@ -23,8 +24,64 @@ export class Loader {
         public plugins: Plugin[] = [],
         public opts: LoaderOptions = {
             jsonToTS: false,
+            txtToTS: false
         },
     ) {}
+    createImport(readFile = Deno.readFile) {
+        return async (src: string) => {
+            const buf = await readFile(src);
+
+            return await this.load(this.parse({
+                buf,
+                src
+            }));
+        }
+    }
+    async loadBuf(buf: Uint8Array, contentType: string) {
+        switch (contentType) {
+            case "application/json": return JSON.parse(textDecoder.decode(buf));
+            case "text/plain": return textDecoder.decode(buf);
+            case "application/typescript": return await this.loadTS(textDecoder.decode(buf));
+            case "application/javascript": return await this.loadJS(textDecoder.decode(buf));
+            default: return buf;
+        }
+    }
+    async loadJS(code: string) {
+        return await import(codeToURI(code, "application/javascript"));
+    }
+    async loadTS(code: string) {
+        return await import(codeToURI(code));
+    }
+    async loadCode(code: string, contentType: string) {
+        switch (contentType) {
+            case "application/json": return JSON.parse(code);
+            case "text/plain": return code;
+            case "application/typescript": return await this.loadTS(code);
+            case "application/javascript": return await this.loadJS(code);
+            default: throw new Error(`Invalid contentType`);
+        }
+    }
+    async load(parsed: LoadReturn) {
+        const {
+            contentType
+        } = parsed;
+        let buf: Uint8Array;
+
+        if ("uri" in parsed) {
+            buf = await fetch(parsed.uri)
+                .then((res) => res.blob())
+                .then((blob) => blob.arrayBuffer())
+                .then((arr) => new Uint8Array(arr));
+        } else if ("root" in parsed) {
+            buf = await Deno.readFile(parsed.root);
+        } else if ("code" in parsed) {
+            return this.loadCode(parsed.code, contentType);
+        } else {
+            buf = parsed.buf;
+        }
+
+        return this.loadBuf(buf, contentType);
+    }
     parse({
         buf,
         src,
@@ -39,9 +96,6 @@ export class Loader {
         }
 
         ext ??= src.split(".").slice(1).join(".").toLowerCase();
-        const {
-            jsonToTS,
-        } = opts;
 
         switch (ext) {
             case "js":
@@ -71,12 +125,15 @@ export class Loader {
                         });`,
                 };
             case "txt":
-                return {
+                return opts.txtToTS ? {
                     contentType: "application/typescript",
                     code: `export default ${wrapStr(textDecoder.decode(buf))};`,
+                } : {
+                    contentType: "text/plain",
+                    code: textDecoder.decode(buf)
                 };
             case "json":
-                return jsonToTS
+                return opts.jsonToTS
                     ? {
                         contentType: "application/typescript",
                         code: `export default ${textDecoder.decode(buf)};`,
