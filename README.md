@@ -1,9 +1,10 @@
 # CustomLoader
 
-A Deno custom loader for supporting importing other files for the sake of
-types.<br/> For parsing HTML, it uses
-[Deno DOM](https://deno.land/x/deno_dom@v0.1.36-alpha)<br/> For parsing CSS, it
-uses [NPM/CSS](https://esm.sh/css@3.0.0)<br/> For other ext files those are not
+A Deno custom loader for supporting importing other files those are not import-able for the sake of types. <br/> 
+For parsing HTML, it uses [Deno DOM](https://deno.land/x/deno_dom@v0.1.36-alpha)<br/> 
+For parsing CSS, it
+uses [NPM/CSS](https://esm.sh/css@3.0.0)<br/> 
+For other files those are not
 supported by ESM, it will just make a TypeScript file that export
 Uint8Array.<br/>
 
